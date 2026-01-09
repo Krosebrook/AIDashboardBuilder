@@ -1,5 +1,5 @@
 
-export type WidgetType = 'stat' | 'line-chart' | 'bar-chart' | 'pie-chart' | 'area-chart' | 'scatter-plot';
+export type WidgetType = 'stat' | 'line-chart' | 'bar-chart' | 'pie-chart' | 'area-chart' | 'scatter-plot' | 'radar-chart' | 'radial-bar-chart' | 'funnel-chart';
 
 export interface ChartDataItem {
   name: string;
@@ -8,6 +8,7 @@ export interface ChartDataItem {
   y?: number;
   z?: number; // often used for bubble/size
   category?: string;
+  fill?: string; // for radial bars or specific coloring
   [key: string]: string | number | undefined;
 }
 

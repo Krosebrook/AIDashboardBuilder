@@ -8,7 +8,7 @@ import { DashboardData } from "./types";
  */
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const WIDGET_ENUM = ['stat', 'line-chart', 'bar-chart', 'pie-chart', 'area-chart', 'scatter-plot'];
+const WIDGET_ENUM = ['stat', 'line-chart', 'bar-chart', 'pie-chart', 'area-chart', 'scatter-plot', 'radar-chart', 'radial-bar-chart', 'funnel-chart'];
 const SCATTER_SHAPES = ['circle', 'cross', 'diamond', 'square', 'star', 'triangle', 'wye'];
 
 const WIDGET_PROPERTIES = {
@@ -35,7 +35,8 @@ const WIDGET_PROPERTIES = {
         x: { type: Type.NUMBER },
         y: { type: Type.NUMBER },
         z: { type: Type.NUMBER },
-        category: { type: Type.STRING }
+        category: { type: Type.STRING },
+        fill: { type: Type.STRING }
       }
     }
   },
@@ -60,10 +61,15 @@ export const generateDashboardSchema = async (userPrompt: string): Promise<Dashb
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
     contents: `Generate a dashboard schema based on this request: "${userPrompt}". 
-    Create between 4 to 8 widgets including stats and charts (line-chart, bar-chart, pie-chart, area-chart, scatter-plot). 
-    For scatter-plots, ensure chartData has numeric 'x' and 'y' properties. If applicable, add 'z' for size and 'category' for color coding.
-    Populate 'scatterConfig' if 'scatter-plot' is used to define how sizeKey and colorKey map to data.
-    Provide realistic sample data for charts.`,
+    Create between 4 to 8 widgets including stats and charts (line-chart, bar-chart, pie-chart, area-chart, scatter-plot, radar-chart, radial-bar-chart, funnel-chart). 
+    
+    CRITICAL INSTRUCTIONS:
+    1. For 'scatter-plot': Include 'x', 'y', 'z', 'category' in chartData and populate 'scatterConfig'.
+    2. For 'radar-chart': Use it for multi-variable comparison (e.g., skills, performance metrics).
+    3. For 'funnel-chart': Use it for stages (e.g., sales pipeline, conversion).
+    4. For 'radial-bar-chart': Use it for circular progress or ranking.
+    
+    Provide realistic, varied sample data for all charts.`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -105,7 +111,8 @@ export const updateDashboardSchema = async (currentData: DashboardData, command:
     
     User Command: "${command}"
     
-    Modify the dashboard according to the user command. You can add, remove, or modify widgets (types: line, bar, pie, area, scatter, stat). 
+    Modify the dashboard according to the user command. You can add, remove, or modify widgets.
+    Supported chart types: stat, line-chart, bar-chart, pie-chart, area-chart, scatter-plot, radar-chart, radial-bar-chart, funnel-chart.
     For scatter-plots, users might want to change sizeKey, colorKey, or shape. Ensure you update scatterConfig accordingly.
     Maintain the JSON structure. Return the FULL updated JSON.`,
     config: {

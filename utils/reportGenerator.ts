@@ -59,14 +59,42 @@ export const generateHtmlReport = (data: DashboardData): string => {
     <script>
         ${data.widgets.filter(w => w.type !== 'stat').map(w => {
           const isScatter = w.type === 'scatter-plot';
+          const isRadar = w.type === 'radar-chart';
+          const isRadial = w.type === 'radial-bar-chart';
+          const isFunnel = w.type === 'funnel-chart';
+
           const labels = isScatter ? [] : JSON.stringify(w.chartData?.map(d => d.name) || []);
+          
+          let chartType = 'line';
+          if (w.type === 'line-chart') chartType = 'line';
+          else if (w.type === 'bar-chart') chartType = 'bar';
+          else if (w.type === 'pie-chart') chartType = 'pie';
+          else if (w.type === 'scatter-plot') chartType = 'scatter';
+          else if (w.type === 'radar-chart') chartType = 'radar';
+          else if (w.type === 'radial-bar-chart') chartType = 'doughnut'; // Fallback
+          else if (w.type === 'funnel-chart') chartType = 'bar'; // Fallback
+
           const chartData = isScatter 
             ? JSON.stringify(w.chartData?.map(d => ({ x: d.x, y: d.y })) || [])
             : JSON.stringify(w.chartData?.map(d => d.value) || []);
 
+          const options: any = {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                  y: { display: !['pie-chart', 'radar-chart', 'radial-bar-chart'].includes(w.type) },
+                  x: { display: !['pie-chart', 'radar-chart', 'radial-bar-chart'].includes(w.type) }
+              }
+          };
+
+          if (isFunnel) {
+              options.indexAxis = 'y'; // Horizontal bar to simulate funnel-ish view
+          }
+
           return `
             new Chart(document.getElementById('chart-${w.id}'), {
-                type: '${w.type === 'line-chart' ? 'line' : w.type === 'bar-chart' ? 'bar' : w.type === 'pie-chart' ? 'pie' : w.type === 'scatter-plot' ? 'scatter' : 'line'}',
+                type: '${chartType}',
                 data: {
                     ${isScatter ? '' : `labels: ${labels},`}
                     datasets: [{
@@ -75,19 +103,11 @@ export const generateHtmlReport = (data: DashboardData): string => {
                         backgroundColor: '${w.color || data.themeColor}80',
                         borderColor: '${w.color || data.themeColor}',
                         borderWidth: 2,
-                        fill: ${w.type === 'area-chart' ? 'true' : 'false'},
+                        fill: ${w.type === 'area-chart' || isRadar ? 'true' : 'false'},
                         tension: 0.4
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { display: ${w.type === 'pie-chart' ? 'false' : 'true'} },
-                        x: { display: ${w.type === 'pie-chart' ? 'false' : 'true'} }
-                    }
-                }
+                options: ${JSON.stringify(options)}
             });
           `;
         }).join('')}

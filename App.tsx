@@ -4,7 +4,8 @@ import {
   Plus, FileText, CheckCircle2, 
   ChevronRight, Sparkles, AlertCircle, RefreshCcw, Github, 
   Loader2, Edit3, Trash2, X, Settings2, Layout,
-  MessageSquare, Send, Wand2, ArrowLeft, MoreHorizontal
+  MessageSquare, Send, Wand2, ArrowLeft, MoreHorizontal,
+  Box, Palette, Maximize
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardData, WizardStep, DashboardWidget, WidgetType, ScatterShape } from './types';
@@ -131,13 +132,16 @@ const App: React.FC = () => {
   const currentEditingWidget = dashboardData?.widgets.find(w => w.id === editingWidgetId);
 
   // Dynamically extract keys from the widget's chart data for attribute mapping
+  // We scan up to 10 items to be safer than 3, ensuring we catch keys that might be sparse
   const availableDataKeys = useMemo(() => {
     if (!currentEditingWidget?.chartData || currentEditingWidget.chartData.length === 0) {
       return ['x', 'y', 'z', 'value', 'category'];
     }
-    // Get all unique keys from the first few items, excluding 'name' as it's usually the label
     const keys = new Set<string>();
-    currentEditingWidget.chartData.slice(0, 3).forEach(item => {
+    // Pre-populate standard keys
+    ['x', 'y', 'z', 'category', 'value'].forEach(k => keys.add(k));
+    
+    currentEditingWidget.chartData.slice(0, 10).forEach(item => {
       Object.keys(item).forEach(key => {
         if (key !== 'name') keys.add(key);
       });
@@ -315,103 +319,128 @@ const App: React.FC = () => {
               exit={{ x: '100%' }}
               className="relative w-full max-w-md h-full bg-white shadow-2xl p-8 overflow-y-auto"
             >
-              <div className="flex items-center justify-between mb-10">
-                <h3 className="text-2xl font-black tracking-tight">Customize Widget</h3>
+              <div className="flex items-center justify-between mb-8 sticky top-0 bg-white z-10 py-2 border-b border-slate-100">
+                <h3 className="text-xl font-black tracking-tight">Customize Widget</h3>
                 <button onClick={() => setEditingWidgetId(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-                  <X className="w-6 h-6 text-slate-400" />
+                  <X className="w-5 h-5 text-slate-400" />
                 </button>
               </div>
 
-              <div className="space-y-8">
+              <div className="space-y-8 pb-24">
                 <section className="space-y-4">
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-400">Basic Info</label>
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Edit3 className="w-4 h-4" />
+                    <label className="text-xs font-black uppercase tracking-widest">General Settings</label>
+                  </div>
                   <div className="space-y-3">
-                    <input 
-                      type="text" 
-                      value={currentEditingWidget.title} 
-                      onChange={(e) => updateWidget(editingWidgetId, { title: e.target.value })}
-                      className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold"
-                      placeholder="Title"
-                    />
-                    <select 
-                      value={currentEditingWidget.type}
-                      onChange={(e) => updateWidget(editingWidgetId, { type: e.target.value as WidgetType })}
-                      className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold"
-                    >
-                      <option value="stat">Stat Card</option>
-                      <option value="line-chart">Line Chart</option>
-                      <option value="bar-chart">Bar Chart</option>
-                      <option value="area-chart">Area Chart</option>
-                      <option value="pie-chart">Pie Chart</option>
-                      <option value="scatter-plot">Scatter Plot</option>
-                    </select>
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 mb-1 block ml-1">Title</label>
+                        <input 
+                        type="text" 
+                        value={currentEditingWidget.title} 
+                        onChange={(e) => updateWidget(editingWidgetId, { title: e.target.value })}
+                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-sm focus:ring-2 focus:ring-indigo-100"
+                        placeholder="Widget Title"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-400 mb-1 block ml-1">Type</label>
+                        <select 
+                        value={currentEditingWidget.type}
+                        onChange={(e) => updateWidget(editingWidgetId, { type: e.target.value as WidgetType })}
+                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-sm focus:ring-2 focus:ring-indigo-100 appearance-none"
+                        >
+                        <option value="stat">Stat Card</option>
+                        <option value="line-chart">Line Chart</option>
+                        <option value="bar-chart">Bar Chart</option>
+                        <option value="area-chart">Area Chart</option>
+                        <option value="pie-chart">Pie Chart</option>
+                        <option value="scatter-plot">Scatter Plot</option>
+                        <option value="radar-chart">Radar Chart</option>
+                        <option value="radial-bar-chart">Radial Bar Chart</option>
+                        <option value="funnel-chart">Funnel Chart</option>
+                        </select>
+                    </div>
                   </div>
                 </section>
 
                 {currentEditingWidget.type === 'scatter-plot' && (
-                  <section className="space-y-4 bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100">
-                    <label className="text-xs font-black uppercase tracking-widest text-indigo-400">Scatter Appearance</label>
-                    <div className="space-y-4">
+                  <section className="space-y-5 bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100">
+                    <div className="flex items-center gap-2 text-indigo-500 mb-2">
+                        <Box className="w-4 h-4" />
+                        <label className="text-xs font-black uppercase tracking-widest">Scatter Configuration</label>
+                    </div>
+                    
+                    <div className="space-y-5">
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">Point Shape</label>
+                        <label className="text-[10px] font-bold text-slate-500 mb-2 block">Point Shape</label>
                         <div className="grid grid-cols-4 gap-2">
                           {['circle', 'square', 'diamond', 'star', 'triangle', 'wye', 'cross'].map((s) => (
                             <button
                               key={s}
                               onClick={() => updateScatterConfig(editingWidgetId, { shape: s as ScatterShape })}
-                              className={`p-2 rounded-xl text-[10px] font-bold capitalize transition-all ${currentEditingWidget.scatterConfig?.shape === s ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-600 border border-slate-200'}`}
+                              className={`p-3 rounded-2xl flex items-center justify-center transition-all ${currentEditingWidget.scatterConfig?.shape === s ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-200' : 'bg-white text-slate-400 border border-slate-200 hover:border-indigo-200 hover:text-indigo-500'}`}
+                              title={s}
                             >
-                              {s}
+                                {/* Simple icons representation could go here, for now using text/dots */}
+                                <span className="w-2 h-2 bg-current rounded-full" />
                             </button>
                           ))}
                         </div>
                       </div>
 
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">Map Size to Attribute</label>
-                        <select 
-                          value={currentEditingWidget.scatterConfig?.sizeKey || ''}
-                          onChange={(e) => updateScatterConfig(editingWidgetId, { sizeKey: e.target.value })}
-                          className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold"
-                        >
-                          <option value="">Default Size (Fixed)</option>
-                          {availableDataKeys.map(k => (
-                            <option key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</option>
-                          ))}
-                        </select>
-                      </div>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <Maximize className="w-3 h-3 text-slate-400" />
+                                <label className="text-[10px] font-bold text-slate-500">Size Attribute</label>
+                            </div>
+                            <select 
+                            value={currentEditingWidget.scatterConfig?.sizeKey || ''}
+                            onChange={(e) => updateScatterConfig(editingWidgetId, { sizeKey: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-bold focus:ring-2 focus:ring-indigo-100"
+                            >
+                            <option value="">Fixed Size</option>
+                            {availableDataKeys.map(k => (
+                                <option key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</option>
+                            ))}
+                            </select>
+                        </div>
 
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">Map Color to Attribute</label>
-                        <select 
-                          value={currentEditingWidget.scatterConfig?.colorKey || ''}
-                          onChange={(e) => updateScatterConfig(editingWidgetId, { colorKey: e.target.value })}
-                          className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold"
-                        >
-                          <option value="">Single Color (Theme)</option>
-                          {availableDataKeys.map(k => (
-                            <option key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</option>
-                          ))}
-                        </select>
+                        <div>
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <Palette className="w-3 h-3 text-slate-400" />
+                                <label className="text-[10px] font-bold text-slate-500">Color Attribute</label>
+                            </div>
+                            <select 
+                            value={currentEditingWidget.scatterConfig?.colorKey || ''}
+                            onChange={(e) => updateScatterConfig(editingWidgetId, { colorKey: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-bold focus:ring-2 focus:ring-indigo-100"
+                            >
+                            <option value="">Single Color</option>
+                            {availableDataKeys.map(k => (
+                                <option key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</option>
+                            ))}
+                            </select>
+                        </div>
                       </div>
                       
                       {currentEditingWidget.scatterConfig?.sizeKey && (
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 mb-1 block">Point Size Range</label>
-                          <div className="flex gap-2">
+                        <div className="pt-2 border-t border-indigo-100">
+                          <label className="text-[10px] font-bold text-slate-500 mb-2 block">Size Range (px)</label>
+                          <div className="flex items-center gap-3">
                             <input 
                               type="number" 
                               value={currentEditingWidget.scatterConfig?.sizeRange?.[0] || 50}
                               onChange={(e) => updateScatterConfig(editingWidgetId, { sizeRange: [parseInt(e.target.value), currentEditingWidget.scatterConfig?.sizeRange?.[1] || 250] })}
-                              className="w-1/2 bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold"
-                              placeholder="Min"
+                              className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-bold text-center"
                             />
+                            <span className="text-slate-300 font-bold">-</span>
                             <input 
                               type="number" 
                               value={currentEditingWidget.scatterConfig?.sizeRange?.[1] || 250}
                               onChange={(e) => updateScatterConfig(editingWidgetId, { sizeRange: [currentEditingWidget.scatterConfig?.sizeRange?.[0] || 50, parseInt(e.target.value)] })}
-                              className="w-1/2 bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold"
-                              placeholder="Max"
+                              className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-bold text-center"
                             />
                           </div>
                         </div>
@@ -430,19 +459,19 @@ const App: React.FC = () => {
                       setEditingWidgetId(null);
                     }
                   }}
-                  className="w-full p-4 text-rose-500 font-bold hover:bg-rose-50 rounded-2xl transition-colors flex items-center justify-center gap-2"
+                  className="w-full p-4 text-rose-500 font-bold hover:bg-rose-50 rounded-2xl transition-colors flex items-center justify-center gap-2 border border-transparent hover:border-rose-100"
                 >
                   <Trash2 className="w-5 h-5" />
-                  Remove Widget
+                  Delete Widget
                 </button>
               </div>
 
-              <div className="absolute bottom-8 left-8 right-8">
+              <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-100">
                 <button 
                   onClick={() => setEditingWidgetId(null)}
-                  className="w-full bg-slate-900 text-white py-5 rounded-3xl font-black shadow-xl"
+                  className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all"
                 >
-                  Save Changes
+                  Done
                 </button>
               </div>
             </motion.div>
