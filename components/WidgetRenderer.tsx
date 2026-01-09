@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, 
   ScatterChart, Scatter, ZAxis, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, Cell, Legend
+  Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { DashboardWidget, ScatterConfig } from '../types';
 
@@ -15,48 +14,67 @@ interface CustomScatterTooltipProps {
   scatterConfig?: ScatterConfig;
 }
 
+const formatNumber = (num: any) => {
+  if (typeof num === 'number') {
+    return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+  return num;
+};
+
 const CustomScatterTooltip = ({ active, payload, scatterConfig }: CustomScatterTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const { sizeKey, colorKey } = scatterConfig || {};
 
     return (
-      <div className="bg-slate-900 text-white p-3 rounded-xl shadow-2xl border border-slate-800 text-[10px] font-bold space-y-1">
-        <p className="text-indigo-400 uppercase tracking-widest border-b border-white/10 pb-1 mb-1">{data.name || 'Data Point'}</p>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-          <span className="text-slate-400">X Value:</span>
-          <span className="text-right font-mono">{data.x}</span>
-          <span className="text-slate-400">Y Value:</span>
-          <span className="text-right font-mono">{data.y}</span>
-          
-          {sizeKey && (
-            <>
-              <span className="text-indigo-300">Size ({sizeKey}):</span>
-              {/* Fix: use any cast to handle dynamic indexing safely */}
-              <span className="text-right font-mono text-indigo-200">{data[sizeKey as any]}</span>
-            </>
-          )}
+      <div className="bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-white/10 text-xs font-medium min-w-[160px]">
+        <div className="mb-3 border-b border-white/10 pb-2">
+          <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold mb-0.5">Data Point</p>
+          <p className="text-white font-bold text-sm">{data.name || 'Untitled'}</p>
+        </div>
 
-          {colorKey && colorKey !== sizeKey && (
-            <>
-              <span className="text-emerald-300">Color ({colorKey}):</span>
-              {/* Fix: use any cast to handle dynamic indexing safely */}
-              <span className="text-right font-mono text-emerald-200">{data[colorKey as any]}</span>
-            </>
-          )}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-400 font-bold uppercase">X Axis</span>
+              <span className="font-mono text-indigo-300 font-bold text-sm">{formatNumber(data.x)}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-400 font-bold uppercase">Y Axis</span>
+              <span className="font-mono text-indigo-300 font-bold text-sm">{formatNumber(data.y)}</span>
+            </div>
+          </div>
 
-          {!sizeKey && data.z !== undefined && (
-            <>
-              <span className="text-slate-400">Z Value:</span>
-              <span className="text-right font-mono">{data.z}</span>
-            </>
-          )}
-          
-          {!colorKey && data.category && (
-            <>
-              <span className="text-slate-400">Category:</span>
-              <span className="text-right text-indigo-300">{data.category}</span>
-            </>
+          {(sizeKey || colorKey || data.z !== undefined || data.category) && (
+            <div className="border-t border-white/10 pt-3 space-y-2">
+              {sizeKey && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Size ({sizeKey})</span>
+                  <span className="font-mono text-emerald-300 font-bold">{formatNumber(data[sizeKey as string])}</span>
+                </div>
+              )}
+              
+              {colorKey && colorKey !== sizeKey && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Color ({colorKey})</span>
+                  <span className="font-mono text-emerald-300 font-bold">{data[colorKey as string]}</span>
+                </div>
+              )}
+
+              {!sizeKey && data.z !== undefined && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Z Value</span>
+                  <span className="font-mono text-slate-200">{formatNumber(data.z)}</span>
+                </div>
+              )}
+
+              {!colorKey && data.category && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Category</span>
+                  <span className="font-mono text-slate-200">{data.category}</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -148,12 +166,10 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
         );
       case 'scatter-plot':
         const colorKey = widget.scatterConfig?.colorKey;
-        // Fix: Cast colorKey to any when indexing to avoid potential inference issues within the map callback
         const categories = colorKey 
-          ? [...new Set(data.map(d => String(d[colorKey as any] || 'Uncategorized')))].filter(cat => cat !== 'undefined')
+          ? [...new Set(data.map(d => String(d[colorKey as string] || 'Uncategorized')))].filter(cat => cat !== 'undefined')
           : [];
         
-        // Fix: Use a manually populated object instead of Object.fromEntries to avoid "unknown" index type errors in varied TS environments
         const colorMap: Record<string, string> = {};
         categories.forEach((cat, i) => {
           colorMap[cat] = CHART_COLORS[i % CHART_COLORS.length];
@@ -183,8 +199,7 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
                   shape={widget.scatterConfig?.shape || 'circle'}
                 >
                   {data.map((entry, index) => {
-                    // Fix: Ensure catValue is derived using a safe cast for indexing
-                    const catValue = colorKey ? String(entry[colorKey as any] || 'Uncategorized') : '';
+                    const catValue = colorKey ? String(entry[colorKey as string] || 'Uncategorized') : '';
                     const fill = colorKey ? (colorMap[catValue] || primaryColor) : primaryColor;
                     return <Cell key={`cell-${index}`} fill={fill} />;
                   })}
