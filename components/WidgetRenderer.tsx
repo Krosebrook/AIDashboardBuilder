@@ -5,9 +5,67 @@ import {
   ScatterChart, Scatter, ZAxis, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer, Cell 
 } from 'recharts';
-import { DashboardWidget } from '../types';
+import { DashboardWidget, ScatterConfig } from '../types';
 
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+interface CustomScatterTooltipProps {
+  active?: boolean;
+  payload?: any[];
+  scatterConfig?: ScatterConfig;
+}
+
+const CustomScatterTooltip = ({ active, payload, scatterConfig }: CustomScatterTooltipProps) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const { sizeKey, colorKey } = scatterConfig || {};
+
+    return (
+      <div className="bg-slate-900 text-white p-3 rounded-xl shadow-2xl border border-slate-800 text-[10px] font-bold space-y-1">
+        <p className="text-indigo-400 uppercase tracking-widest border-b border-white/10 pb-1 mb-1">{data.name || 'Data Point'}</p>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+          <span className="text-slate-400">X Value:</span>
+          <span className="text-right font-mono">{data.x}</span>
+          <span className="text-slate-400">Y Value:</span>
+          <span className="text-right font-mono">{data.y}</span>
+          
+          {/* Display mapped Size Attribute */}
+          {sizeKey && (
+            <>
+              <span className="text-indigo-300">Size ({sizeKey}):</span>
+              <span className="text-right font-mono text-indigo-200">{data[sizeKey]}</span>
+            </>
+          )}
+
+          {/* Display mapped Color Attribute */}
+          {colorKey && colorKey !== sizeKey && (
+            <>
+              <span className="text-emerald-300">Color ({colorKey}):</span>
+              <span className="text-right font-mono text-emerald-200">{data[colorKey]}</span>
+            </>
+          )}
+
+          {/* Fallback for Z if not specifically mapped to size but present */}
+          {!sizeKey && data.z !== undefined && (
+            <>
+              <span className="text-slate-400">Z Value:</span>
+              <span className="text-right font-mono">{data.z}</span>
+            </>
+          )}
+          
+          {/* Fallback for Category if not specifically mapped to color but present */}
+          {!colorKey && data.category && (
+            <>
+              <span className="text-slate-400">Category:</span>
+              <span className="text-right text-indigo-300">{data.category}</span>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }) => {
   const primaryColor = widget.color || '#3b82f6';
@@ -91,15 +149,39 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
           </ResponsiveContainer>
         );
       case 'scatter-plot':
+        // Generate a simple color map for categories if a colorKey is present
+        const categories = [...new Set(data.map(d => String(d[widget.scatterConfig?.colorKey || ''])))]
+          .filter(cat => cat && cat !== 'undefined');
+        const colorMap = Object.fromEntries(categories.map((cat, i) => [cat, CHART_COLORS[i % CHART_COLORS.length]]));
+
         return (
           <ResponsiveContainer width="100%" height={180}>
             <ScatterChart margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
               <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
               <XAxis type="number" dataKey="x" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }} />
               <YAxis type="number" dataKey="y" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }} />
-              <ZAxis type="number" range={[50, 200]} />
-              <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', fontSize: '10px', fontWeight: 700 }} />
-              <Scatter name={widget.title} data={data} fill={primaryColor} />
+              <ZAxis 
+                type="number" 
+                dataKey={widget.scatterConfig?.sizeKey} 
+                range={widget.scatterConfig?.sizeRange || [50, 250]} 
+                name="Size"
+              />
+              <Tooltip 
+                cursor={{ strokeDasharray: '3 3' }} 
+                content={<CustomScatterTooltip scatterConfig={widget.scatterConfig} />}
+              />
+              <Scatter 
+                name={widget.title} 
+                data={data} 
+                fill={primaryColor} 
+                shape={widget.scatterConfig?.shape || 'circle'}
+              >
+                {data.map((entry, index) => {
+                  const catValue = String(entry[widget.scatterConfig?.colorKey || '']);
+                  const fill = colorMap[catValue] || primaryColor;
+                  return <Cell key={`cell-${index}`} fill={fill} />;
+                })}
+              </Scatter>
             </ScatterChart>
           </ResponsiveContainer>
         );

@@ -9,6 +9,7 @@ import { DashboardData } from "./types";
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const WIDGET_ENUM = ['stat', 'line-chart', 'bar-chart', 'pie-chart', 'area-chart', 'scatter-plot'];
+const SCATTER_SHAPES = ['circle', 'cross', 'diamond', 'square', 'star', 'triangle', 'wye'];
 
 const WIDGET_PROPERTIES = {
   id: { type: Type.STRING },
@@ -32,21 +33,36 @@ const WIDGET_PROPERTIES = {
         name: { type: Type.STRING },
         value: { type: Type.NUMBER },
         x: { type: Type.NUMBER },
-        y: { type: Type.NUMBER }
+        y: { type: Type.NUMBER },
+        z: { type: Type.NUMBER },
+        category: { type: Type.STRING }
+      }
+    }
+  },
+  scatterConfig: {
+    type: Type.OBJECT,
+    properties: {
+      sizeKey: { type: Type.STRING, description: "Key from chartData to determine point size (e.g., 'z')" },
+      colorKey: { type: Type.STRING, description: "Key from chartData to determine point color (e.g., 'category')" },
+      shape: { type: Type.STRING, enum: SCATTER_SHAPES },
+      sizeRange: {
+        type: Type.ARRAY,
+        items: { type: Type.NUMBER },
+        description: "Min and Max size of points, e.g., [20, 200]"
       }
     }
   },
   color: { type: Type.STRING }
 };
 
-// Use gemini-3-pro-preview for complex coding/logic tasks like JSON schema generation
 export const generateDashboardSchema = async (userPrompt: string): Promise<DashboardData> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
     contents: `Generate a dashboard schema based on this request: "${userPrompt}". 
     Create between 4 to 8 widgets including stats and charts (line-chart, bar-chart, pie-chart, area-chart, scatter-plot). 
-    For scatter-plots, ensure chartData has numeric 'x' and 'y' properties for coordinates.
+    For scatter-plots, ensure chartData has numeric 'x' and 'y' properties. If applicable, add 'z' for size and 'category' for color coding.
+    Populate 'scatterConfig' if 'scatter-plot' is used to define how sizeKey and colorKey map to data.
     Provide realistic sample data for charts.`,
     config: {
       responseMimeType: "application/json",
@@ -80,7 +96,6 @@ export const generateDashboardSchema = async (userPrompt: string): Promise<Dashb
   }
 };
 
-// Use gemini-3-pro-preview for complex updates
 export const updateDashboardSchema = async (currentData: DashboardData, command: string): Promise<DashboardData> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
@@ -90,8 +105,8 @@ export const updateDashboardSchema = async (currentData: DashboardData, command:
     
     User Command: "${command}"
     
-    Modify the dashboard according to the user command. You can add, remove, or modify widgets, change themes, or update data. 
-    Supported charts: line-chart, bar-chart, pie-chart, area-chart, scatter-plot.
+    Modify the dashboard according to the user command. You can add, remove, or modify widgets (types: line, bar, pie, area, scatter, stat). 
+    For scatter-plots, users might want to change sizeKey, colorKey, or shape. Ensure you update scatterConfig accordingly.
     Maintain the JSON structure. Return the FULL updated JSON.`,
     config: {
       responseMimeType: "application/json",

@@ -6,7 +6,18 @@ export interface ChartDataItem {
   value: number;
   x?: number;
   y?: number;
+  z?: number; // often used for bubble/size
+  category?: string;
   [key: string]: string | number | undefined;
+}
+
+export type ScatterShape = 'circle' | 'cross' | 'diamond' | 'square' | 'star' | 'triangle' | 'wye';
+
+export interface ScatterConfig {
+  sizeKey?: string;
+  colorKey?: string;
+  shape?: ScatterShape;
+  sizeRange?: [number, number];
 }
 
 export interface DashboardWidget {
@@ -21,6 +32,7 @@ export interface DashboardWidget {
   };
   chartData?: ChartDataItem[];
   color?: string;
+  scatterConfig?: ScatterConfig;
 }
 
 export interface DashboardData {

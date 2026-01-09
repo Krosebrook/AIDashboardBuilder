@@ -1,13 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Plus, FileText, CheckCircle2, 
   ChevronRight, Sparkles, AlertCircle, RefreshCcw, Github, 
   Loader2, Edit3, Trash2, X, Settings2, Layout,
-  MessageSquare, Send, Wand2, ArrowLeft
+  MessageSquare, Send, Wand2, ArrowLeft, MoreHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DashboardData, WizardStep, DashboardWidget, WidgetType } from './types';
+import { DashboardData, WizardStep, DashboardWidget, WidgetType, ScatterShape } from './types';
 import { SAMPLE_TEMPLATES } from './constants';
 import { generateDashboardSchema, updateDashboardSchema } from './geminiService';
 import { WidgetRenderer } from './components/WidgetRenderer';
@@ -50,6 +50,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [chatCommand, setChatCommand] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
 
   // Handles initial dashboard generation
   const handleGenerate = async (p: string) => {
@@ -87,7 +88,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Exports the dashboard as a standalone HTML report
   const handleExport = () => {
     if (!dashboardData) return;
     try {
@@ -111,6 +111,39 @@ const App: React.FC = () => {
     setDashboardData(null);
     setPrompt('');
   };
+
+  const updateWidget = (id: string, updates: Partial<DashboardWidget>) => {
+    if (!dashboardData) return;
+    setDashboardData({
+      ...dashboardData,
+      widgets: dashboardData.widgets.map(w => w.id === id ? { ...w, ...updates } : w)
+    });
+  };
+
+  const updateScatterConfig = (id: string, updates: Partial<DashboardWidget['scatterConfig']>) => {
+    const widget = dashboardData?.widgets.find(w => w.id === id);
+    if (!widget) return;
+    updateWidget(id, {
+      scatterConfig: { ...(widget.scatterConfig || {}), ...updates }
+    });
+  };
+
+  const currentEditingWidget = dashboardData?.widgets.find(w => w.id === editingWidgetId);
+
+  // Dynamically extract keys from the widget's chart data for attribute mapping
+  const availableDataKeys = useMemo(() => {
+    if (!currentEditingWidget?.chartData || currentEditingWidget.chartData.length === 0) {
+      return ['x', 'y', 'z', 'value', 'category'];
+    }
+    // Get all unique keys from the first few items, excluding 'name' as it's usually the label
+    const keys = new Set<string>();
+    currentEditingWidget.chartData.slice(0, 3).forEach(item => {
+      Object.keys(item).forEach(key => {
+        if (key !== 'name') keys.add(key);
+      });
+    });
+    return Array.from(keys);
+  }, [currentEditingWidget]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-indigo-100">
@@ -247,16 +280,175 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {dashboardData.widgets.map((widget) => (
-                  <WidgetRenderer 
-                    key={widget.id} 
-                    widget={{ ...widget, color: widget.color || dashboardData.themeColor }} 
-                  />
+                  <div key={widget.id} className="relative group">
+                    <WidgetRenderer 
+                      widget={{ ...widget, color: widget.color || dashboardData.themeColor }} 
+                    />
+                    <button 
+                      onClick={() => setEditingWidgetId(widget.id)}
+                      className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur rounded-xl shadow-lg border border-slate-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Settings2 className="w-4 h-4 text-slate-600" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </main>
+
+      {/* Widget Customization Drawer/Overlay */}
+      <AnimatePresence>
+        {editingWidgetId && currentEditingWidget && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-end">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingWidgetId(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              className="relative w-full max-w-md h-full bg-white shadow-2xl p-8 overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-10">
+                <h3 className="text-2xl font-black tracking-tight">Customize Widget</h3>
+                <button onClick={() => setEditingWidgetId(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                  <X className="w-6 h-6 text-slate-400" />
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                <section className="space-y-4">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400">Basic Info</label>
+                  <div className="space-y-3">
+                    <input 
+                      type="text" 
+                      value={currentEditingWidget.title} 
+                      onChange={(e) => updateWidget(editingWidgetId, { title: e.target.value })}
+                      className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold"
+                      placeholder="Title"
+                    />
+                    <select 
+                      value={currentEditingWidget.type}
+                      onChange={(e) => updateWidget(editingWidgetId, { type: e.target.value as WidgetType })}
+                      className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold"
+                    >
+                      <option value="stat">Stat Card</option>
+                      <option value="line-chart">Line Chart</option>
+                      <option value="bar-chart">Bar Chart</option>
+                      <option value="area-chart">Area Chart</option>
+                      <option value="pie-chart">Pie Chart</option>
+                      <option value="scatter-plot">Scatter Plot</option>
+                    </select>
+                  </div>
+                </section>
+
+                {currentEditingWidget.type === 'scatter-plot' && (
+                  <section className="space-y-4 bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100">
+                    <label className="text-xs font-black uppercase tracking-widest text-indigo-400">Scatter Appearance</label>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">Point Shape</label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {['circle', 'square', 'diamond', 'star', 'triangle', 'wye', 'cross'].map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => updateScatterConfig(editingWidgetId, { shape: s as ScatterShape })}
+                              className={`p-2 rounded-xl text-[10px] font-bold capitalize transition-all ${currentEditingWidget.scatterConfig?.shape === s ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-600 border border-slate-200'}`}
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">Map Size to Attribute</label>
+                        <select 
+                          value={currentEditingWidget.scatterConfig?.sizeKey || ''}
+                          onChange={(e) => updateScatterConfig(editingWidgetId, { sizeKey: e.target.value })}
+                          className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold"
+                        >
+                          <option value="">Default Size (Fixed)</option>
+                          {availableDataKeys.map(k => (
+                            <option key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">Map Color to Attribute</label>
+                        <select 
+                          value={currentEditingWidget.scatterConfig?.colorKey || ''}
+                          onChange={(e) => updateScatterConfig(editingWidgetId, { colorKey: e.target.value })}
+                          className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold"
+                        >
+                          <option value="">Single Color (Theme)</option>
+                          {availableDataKeys.map(k => (
+                            <option key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      {currentEditingWidget.scatterConfig?.sizeKey && (
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 mb-1 block">Point Size Range</label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="number" 
+                              value={currentEditingWidget.scatterConfig?.sizeRange?.[0] || 50}
+                              onChange={(e) => updateScatterConfig(editingWidgetId, { sizeRange: [parseInt(e.target.value), currentEditingWidget.scatterConfig?.sizeRange?.[1] || 250] })}
+                              className="w-1/2 bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold"
+                              placeholder="Min"
+                            />
+                            <input 
+                              type="number" 
+                              value={currentEditingWidget.scatterConfig?.sizeRange?.[1] || 250}
+                              onChange={(e) => updateScatterConfig(editingWidgetId, { sizeRange: [currentEditingWidget.scatterConfig?.sizeRange?.[0] || 50, parseInt(e.target.value)] })}
+                              className="w-1/2 bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold"
+                              placeholder="Max"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                )}
+
+                <button 
+                  onClick={() => {
+                    if (dashboardData) {
+                      setDashboardData({
+                        ...dashboardData,
+                        widgets: dashboardData.widgets.filter(w => w.id !== editingWidgetId)
+                      });
+                      setEditingWidgetId(null);
+                    }
+                  }}
+                  className="w-full p-4 text-rose-500 font-bold hover:bg-rose-50 rounded-2xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  Remove Widget
+                </button>
+              </div>
+
+              <div className="absolute bottom-8 left-8 right-8">
+                <button 
+                  onClick={() => setEditingWidgetId(null)}
+                  className="w-full bg-slate-900 text-white py-5 rounded-3xl font-black shadow-xl"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {error && (
