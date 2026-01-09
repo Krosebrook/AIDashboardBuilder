@@ -1,10 +1,12 @@
 
-export type WidgetType = 'stat' | 'line-chart' | 'bar-chart' | 'pie-chart' | 'area-chart';
+export type WidgetType = 'stat' | 'line-chart' | 'bar-chart' | 'pie-chart' | 'area-chart' | 'scatter-plot';
 
 export interface ChartDataItem {
   name: string;
   value: number;
-  [key: string]: string | number;
+  x?: number;
+  y?: number;
+  [key: string]: string | number | undefined;
 }
 
 export interface DashboardWidget {

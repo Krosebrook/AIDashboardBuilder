@@ -2,104 +2,105 @@
 import React from 'react';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, 
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell 
+  ScatterChart, Scatter, ZAxis, XAxis, YAxis, CartesianGrid, 
+  Tooltip, ResponsiveContainer, Cell 
 } from 'recharts';
-import { motion } from 'framer-motion';
 import { DashboardWidget } from '../types';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }) => {
+  const primaryColor = widget.color || '#3b82f6';
+
   const renderChart = () => {
-    if (!widget.chartData || widget.chartData.length === 0) {
-      if (widget.type !== 'stat') return <div className="h-[200px] flex items-center justify-center text-slate-300 italic text-sm">No chart data</div>;
-      return null;
+    const data = widget.chartData || [];
+    if (widget.type !== 'stat' && data.length === 0) {
+      return (
+        <div className="h-[180px] w-full bg-slate-50/50 rounded-xl flex items-center justify-center border border-dashed border-slate-200">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No data available</p>
+        </div>
+      );
     }
 
     switch (widget.type) {
       case 'line-chart':
         return (
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={widget.chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <YAxis hide />
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} dy={10} />
+              <YAxis hide domain={['auto', 'auto']} />
               <Tooltip 
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', fontSize: '11px', fontWeight: 700 }}
               />
               <Line 
                 type="monotone" 
                 dataKey="value" 
-                stroke={widget.color || '#3b82f6'} 
+                stroke={primaryColor} 
                 strokeWidth={3} 
-                dot={{ r: 4, fill: widget.color || '#3b82f6', strokeWidth: 2, stroke: '#fff' }} 
-                activeDot={{ r: 6, strokeWidth: 0 }}
+                dot={{ r: 3, fill: primaryColor, strokeWidth: 1.5, stroke: '#fff' }} 
+                activeDot={{ r: 5, strokeWidth: 0 }}
               />
             </LineChart>
           </ResponsiveContainer>
         );
       case 'bar-chart':
         return (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={widget.chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} dy={10} />
               <YAxis hide />
               <Tooltip 
                 cursor={{ fill: '#f8fafc' }}
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', fontSize: '11px', fontWeight: 700 }}
               />
-              <Bar dataKey="value" fill={widget.color || '#3b82f6'} radius={[6, 6, 0, 0]} />
+              <Bar dataKey="value" fill={primaryColor} radius={[4, 4, 0, 0]} barSize={24} />
             </BarChart>
           </ResponsiveContainer>
         );
       case 'area-chart':
         return (
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={widget.chartData}>
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
               <defs>
-                <linearGradient id={`color-${widget.id}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={widget.color || '#3b82f6'} stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor={widget.color || '#3b82f6'} stopOpacity={0}/>
+                <linearGradient id={`grad-${widget.id}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={primaryColor} stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor={primaryColor} stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+              <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} dy={10} />
               <YAxis hide />
-              <Tooltip 
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="value" 
-                stroke={widget.color || '#3b82f6'} 
-                strokeWidth={2}
-                fillOpacity={1} 
-                fill={`url(#color-${widget.id})`} 
-              />
+              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', fontSize: '11px', fontWeight: 700 }} />
+              <Area type="monotone" dataKey="value" stroke={primaryColor} strokeWidth={2.5} fillOpacity={1} fill={`url(#grad-${widget.id})`} />
             </AreaChart>
           </ResponsiveContainer>
         );
       case 'pie-chart':
         return (
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={180}>
             <PieChart>
-              <Pie
-                data={widget.chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={8}
-                dataKey="value"
-                stroke="none"
-              >
-                {widget.chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              <Pie data={data} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={5} dataKey="value" stroke="none">
+                {data.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', fontSize: '10px', fontWeight: 700 }} />
             </PieChart>
+          </ResponsiveContainer>
+        );
+      case 'scatter-plot':
+        return (
+          <ResponsiveContainer width="100%" height={180}>
+            <ScatterChart margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+              <XAxis type="number" dataKey="x" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }} />
+              <YAxis type="number" dataKey="y" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }} />
+              <ZAxis type="number" range={[50, 200]} />
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', fontSize: '10px', fontWeight: 700 }} />
+              <Scatter name={widget.title} data={data} fill={primaryColor} />
+            </ScatterChart>
           </ResponsiveContainer>
         );
       default:
@@ -108,11 +109,11 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col h-[280px] hover:shadow-xl transition-all duration-300">
-      <div className="flex justify-between items-start mb-4">
-        <h3 className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">{widget.title}</h3>
+    <div className="bg-white p-7 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col h-[300px] hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-500">
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="text-slate-400 font-bold text-[9px] uppercase tracking-[0.25em]">{widget.title}</h3>
         {widget.trend && (
-          <div className={`flex items-center text-[10px] font-black px-2 py-0.5 rounded-full ${widget.trend.isUpward ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+          <div className={`flex items-center text-[9px] font-black px-2 py-0.5 rounded-full ${widget.trend.isUpward ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
             {widget.trend.isUpward ? '↑' : '↓'} {widget.trend.value}%
           </div>
         )}
@@ -120,14 +121,20 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
 
       <div className="flex-grow flex flex-col justify-center">
         {widget.type === 'stat' ? (
-          <div className="py-2">
-            <div className="flex items-baseline gap-1">
-              <span className="text-5xl font-black text-slate-900 tracking-tight">{widget.value}</span>
+          <div className="py-2 space-y-1">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-5xl font-black text-slate-900 tracking-tight leading-none">{widget.value}</span>
               {widget.unit && <span className="text-slate-400 font-bold text-lg">{widget.unit}</span>}
+            </div>
+            <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden mt-4">
+              <div 
+                className="h-full rounded-full transition-all duration-1000" 
+                style={{ backgroundColor: primaryColor, width: `${Math.min(100, parseFloat(String(widget.value)) || 75)}%` }} 
+              />
             </div>
           </div>
         ) : (
-          <div className="w-full">
+          <div className="w-full mt-2">
             {renderChart()}
           </div>
         )}

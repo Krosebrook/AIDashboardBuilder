@@ -57,14 +57,21 @@ export const generateHtmlReport = (data: DashboardData): string => {
     </div>
 
     <script>
-        ${data.widgets.filter(w => w.type !== 'stat').map(w => `
+        ${data.widgets.filter(w => w.type !== 'stat').map(w => {
+          const isScatter = w.type === 'scatter-plot';
+          const labels = isScatter ? [] : JSON.stringify(w.chartData?.map(d => d.name) || []);
+          const chartData = isScatter 
+            ? JSON.stringify(w.chartData?.map(d => ({ x: d.x, y: d.y })) || [])
+            : JSON.stringify(w.chartData?.map(d => d.value) || []);
+
+          return `
             new Chart(document.getElementById('chart-${w.id}'), {
-                type: '${w.type === 'line-chart' ? 'line' : w.type === 'bar-chart' ? 'bar' : w.type === 'pie-chart' ? 'pie' : 'line'}',
+                type: '${w.type === 'line-chart' ? 'line' : w.type === 'bar-chart' ? 'bar' : w.type === 'pie-chart' ? 'pie' : w.type === 'scatter-plot' ? 'scatter' : 'line'}',
                 data: {
-                    labels: ${JSON.stringify(w.chartData?.map(d => d.name) || [])},
+                    ${isScatter ? '' : `labels: ${labels},`}
                     datasets: [{
                         label: '${w.title}',
-                        data: ${JSON.stringify(w.chartData?.map(d => d.value) || [])},
+                        data: ${chartData},
                         backgroundColor: '${w.color || data.themeColor}80',
                         borderColor: '${w.color || data.themeColor}',
                         borderWidth: 2,
@@ -82,7 +89,8 @@ export const generateHtmlReport = (data: DashboardData): string => {
                     }
                 }
             });
-        `).join('')}
+          `;
+        }).join('')}
     </script>
 </body>
 </html>
