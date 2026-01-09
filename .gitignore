@@ -1,53 +1,24 @@
-# Dependencies
-node_modules
-/.pnp
-.pnp.js
-
-# Testing
-/coverage
+# Logs
+logs
 *.log
-
-# Next.js
-/.next/
-/out/
-.next
-next-env.d.ts
-
-# Production
-/build
-/dist
-
-# Misc
-.DS_Store
-*.pem
-
-# Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Local env files
-.env*.local
-.env
-.env.development
-.env.production
+node_modules
+dist
+dist-ssr
+*.local
 
-# Vercel
-.vercel
-
-# TypeScript
-*.tsbuildinfo
-
-# IDE
-.vscode
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
 .idea
-*.swp
-*.swo
-
-# Playwright
-/test-results/
-/playwright-report/
-/playwright/.cache/
-
-# Temp
-/tmp
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

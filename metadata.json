@@ -1,0 +1,5 @@
+{
+  "name": "AI Dashboard Builder",
+  "description": "A smart tool to define metrics and schemas using AI, instantly generating beautiful dashboard previews and downloadable HTML reports.",
+  "requestFramePermissions": []
+}
