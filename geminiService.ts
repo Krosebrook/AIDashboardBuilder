@@ -53,7 +53,12 @@ const WIDGET_PROPERTIES = {
       }
     }
   },
-  color: { type: Type.STRING }
+  color: { type: Type.STRING },
+  showDataLabels: { type: Type.BOOLEAN },
+  showTrendline: { type: Type.BOOLEAN },
+  xAxisLabel: { type: Type.STRING },
+  yAxisLabel: { type: Type.STRING },
+  enableZoom: { type: Type.BOOLEAN }
 };
 
 export const generateDashboardSchema = async (userPrompt: string): Promise<DashboardData> => {

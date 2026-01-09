@@ -34,6 +34,13 @@ export interface DashboardWidget {
   chartData?: ChartDataItem[];
   color?: string;
   scatterConfig?: ScatterConfig;
+  
+  // New visual configuration options
+  showDataLabels?: boolean;
+  showTrendline?: boolean;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  enableZoom?: boolean;
 }
 
 export interface DashboardData {

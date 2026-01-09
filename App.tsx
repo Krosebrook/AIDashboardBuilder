@@ -1,11 +1,10 @@
-
 import React, { useState, useMemo } from 'react';
 import { 
   Plus, FileText, CheckCircle2, 
   ChevronRight, Sparkles, AlertCircle, RefreshCcw, Github, 
   Loader2, Edit3, Trash2, X, Settings2, Layout,
   MessageSquare, Send, Wand2, ArrowLeft, MoreHorizontal,
-  Box, Palette, Maximize
+  Box, Palette, Maximize, TrendingUp, Type, ZoomIn, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardData, WizardStep, DashboardWidget, WidgetType, ScatterShape } from './types';
@@ -364,6 +363,109 @@ const App: React.FC = () => {
                   </div>
                 </section>
 
+                {currentEditingWidget.type !== 'stat' && (
+                  <section className="space-y-4">
+                    <div className="flex items-center gap-2 text-slate-400">
+                      <Settings2 className="w-4 h-4" />
+                      <label className="text-xs font-black uppercase tracking-widest">Chart Options</label>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {['line-chart', 'bar-chart', 'area-chart', 'scatter-plot'].includes(currentEditingWidget.type) && (
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-xl shadow-sm">
+                              <ZoomIn className="w-4 h-4 text-indigo-500" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-600">Enable Zoom & Pan</span>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={currentEditingWidget.enableZoom || false}
+                              onChange={(e) => updateWidget(editingWidgetId, { enableZoom: e.target.checked })}
+                              className="sr-only peer" 
+                            />
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                          </label>
+                        </div>
+                      )}
+
+                      {['line-chart', 'bar-chart', 'area-chart', 'funnel-chart'].includes(currentEditingWidget.type) && (
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-xl shadow-sm">
+                              <Eye className="w-4 h-4 text-emerald-500" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-600">Show Data Labels</span>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={currentEditingWidget.showDataLabels || false}
+                              onChange={(e) => updateWidget(editingWidgetId, { showDataLabels: e.target.checked })}
+                              className="sr-only peer" 
+                            />
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                          </label>
+                        </div>
+                      )}
+
+                      {['line-chart', 'area-chart'].includes(currentEditingWidget.type) && (
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-xl shadow-sm">
+                              <TrendingUp className="w-4 h-4 text-rose-500" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-600">Show Trendline</span>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={currentEditingWidget.showTrendline || false}
+                              onChange={(e) => updateWidget(editingWidgetId, { showTrendline: e.target.checked })}
+                              className="sr-only peer" 
+                            />
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                )}
+
+                {/* Axis Configuration */}
+                {['line-chart', 'bar-chart', 'area-chart', 'scatter-plot'].includes(currentEditingWidget.type) && (
+                  <section className="space-y-4">
+                     <div className="flex items-center gap-2 text-slate-400">
+                      <Type className="w-4 h-4" />
+                      <label className="text-xs font-black uppercase tracking-widest">Axis Labels</label>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 mb-1 block ml-1">X-Axis Label</label>
+                        <input 
+                          type="text" 
+                          value={currentEditingWidget.xAxisLabel || ''} 
+                          onChange={(e) => updateWidget(editingWidgetId, { xAxisLabel: e.target.value })}
+                          className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-sm focus:ring-2 focus:ring-indigo-100 placeholder:text-slate-300"
+                          placeholder="e.g. Month"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 mb-1 block ml-1">Y-Axis Label</label>
+                        <input 
+                          type="text" 
+                          value={currentEditingWidget.yAxisLabel || ''} 
+                          onChange={(e) => updateWidget(editingWidgetId, { yAxisLabel: e.target.value })}
+                          className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-sm focus:ring-2 focus:ring-indigo-100 placeholder:text-slate-300"
+                          placeholder="e.g. Revenue ($)"
+                        />
+                      </div>
+                    </div>
+                  </section>
+                )}
+
                 {currentEditingWidget.type === 'scatter-plot' && (
                   <section className="space-y-5 bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100">
                     <div className="flex items-center gap-2 text-indigo-500 mb-2">
@@ -382,7 +484,6 @@ const App: React.FC = () => {
                               className={`p-3 rounded-2xl flex items-center justify-center transition-all ${currentEditingWidget.scatterConfig?.shape === s ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-200' : 'bg-white text-slate-400 border border-slate-200 hover:border-indigo-200 hover:text-indigo-500'}`}
                               title={s}
                             >
-                                {/* Simple icons representation could go here, for now using text/dots */}
                                 <span className="w-2 h-2 bg-current rounded-full" />
                             </button>
                           ))}
