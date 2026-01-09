@@ -3,7 +3,7 @@ import React from 'react';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, 
   ScatterChart, Scatter, ZAxis, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, Cell 
+  Tooltip, ResponsiveContainer, Cell, Legend
 } from 'recharts';
 import { DashboardWidget, ScatterConfig } from '../types';
 
@@ -29,23 +29,22 @@ const CustomScatterTooltip = ({ active, payload, scatterConfig }: CustomScatterT
           <span className="text-slate-400">Y Value:</span>
           <span className="text-right font-mono">{data.y}</span>
           
-          {/* Display mapped Size Attribute */}
           {sizeKey && (
             <>
               <span className="text-indigo-300">Size ({sizeKey}):</span>
-              <span className="text-right font-mono text-indigo-200">{data[sizeKey]}</span>
+              {/* Fix: use any cast to handle dynamic indexing safely */}
+              <span className="text-right font-mono text-indigo-200">{data[sizeKey as any]}</span>
             </>
           )}
 
-          {/* Display mapped Color Attribute */}
           {colorKey && colorKey !== sizeKey && (
             <>
               <span className="text-emerald-300">Color ({colorKey}):</span>
-              <span className="text-right font-mono text-emerald-200">{data[colorKey]}</span>
+              {/* Fix: use any cast to handle dynamic indexing safely */}
+              <span className="text-right font-mono text-emerald-200">{data[colorKey as any]}</span>
             </>
           )}
 
-          {/* Fallback for Z if not specifically mapped to size but present */}
           {!sizeKey && data.z !== undefined && (
             <>
               <span className="text-slate-400">Z Value:</span>
@@ -53,7 +52,6 @@ const CustomScatterTooltip = ({ active, payload, scatterConfig }: CustomScatterT
             </>
           )}
           
-          {/* Fallback for Category if not specifically mapped to color but present */}
           {!colorKey && data.category && (
             <>
               <span className="text-slate-400">Category:</span>
@@ -149,41 +147,63 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
           </ResponsiveContainer>
         );
       case 'scatter-plot':
-        // Generate a simple color map for categories if a colorKey is present
-        const categories = [...new Set(data.map(d => String(d[widget.scatterConfig?.colorKey || ''])))]
-          .filter(cat => cat && cat !== 'undefined');
-        const colorMap = Object.fromEntries(categories.map((cat, i) => [cat, CHART_COLORS[i % CHART_COLORS.length]]));
+        const colorKey = widget.scatterConfig?.colorKey;
+        // Fix: Cast colorKey to any when indexing to avoid potential inference issues within the map callback
+        const categories = colorKey 
+          ? [...new Set(data.map(d => String(d[colorKey as any] || 'Uncategorized')))].filter(cat => cat !== 'undefined')
+          : [];
+        
+        // Fix: Use a manually populated object instead of Object.fromEntries to avoid "unknown" index type errors in varied TS environments
+        const colorMap: Record<string, string> = {};
+        categories.forEach((cat, i) => {
+          colorMap[cat] = CHART_COLORS[i % CHART_COLORS.length];
+        });
 
         return (
-          <ResponsiveContainer width="100%" height={180}>
-            <ScatterChart margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
-              <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
-              <XAxis type="number" dataKey="x" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }} />
-              <YAxis type="number" dataKey="y" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }} />
-              <ZAxis 
-                type="number" 
-                dataKey={widget.scatterConfig?.sizeKey} 
-                range={widget.scatterConfig?.sizeRange || [50, 250]} 
-                name="Size"
-              />
-              <Tooltip 
-                cursor={{ strokeDasharray: '3 3' }} 
-                content={<CustomScatterTooltip scatterConfig={widget.scatterConfig} />}
-              />
-              <Scatter 
-                name={widget.title} 
-                data={data} 
-                fill={primaryColor} 
-                shape={widget.scatterConfig?.shape || 'circle'}
-              >
-                {data.map((entry, index) => {
-                  const catValue = String(entry[widget.scatterConfig?.colorKey || '']);
-                  const fill = colorMap[catValue] || primaryColor;
-                  return <Cell key={`cell-${index}`} fill={fill} />;
-                })}
-              </Scatter>
-            </ScatterChart>
-          </ResponsiveContainer>
+          <div className="flex flex-col h-full">
+            <ResponsiveContainer width="100%" height={180}>
+              <ScatterChart margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+                <XAxis type="number" dataKey="x" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }} />
+                <YAxis type="number" dataKey="y" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }} />
+                <ZAxis 
+                  type="number" 
+                  dataKey={widget.scatterConfig?.sizeKey} 
+                  range={widget.scatterConfig?.sizeRange || [50, 250]} 
+                  name="Size"
+                />
+                <Tooltip 
+                  cursor={{ strokeDasharray: '3 3' }} 
+                  content={<CustomScatterTooltip scatterConfig={widget.scatterConfig} />}
+                />
+                <Scatter 
+                  name={widget.title} 
+                  data={data} 
+                  fill={primaryColor} 
+                  shape={widget.scatterConfig?.shape || 'circle'}
+                >
+                  {data.map((entry, index) => {
+                    // Fix: Ensure catValue is derived using a safe cast for indexing
+                    const catValue = colorKey ? String(entry[colorKey as any] || 'Uncategorized') : '';
+                    const fill = colorKey ? (colorMap[catValue] || primaryColor) : primaryColor;
+                    return <Cell key={`cell-${index}`} fill={fill} />;
+                  })}
+                </Scatter>
+              </ScatterChart>
+            </ResponsiveContainer>
+            
+            {/* Custom Legend for Categories */}
+            {colorKey && categories.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2 justify-center max-h-[60px] overflow-y-auto px-2">
+                {categories.map((cat) => (
+                  <div key={cat} className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full">
+                    <div className="w-1.5 h-1.5 rounded-full shadow-sm" style={{ backgroundColor: colorMap[cat] }} />
+                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider truncate max-w-[80px]">{cat}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         );
       default:
         return null;
@@ -201,7 +221,7 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
         )}
       </div>
 
-      <div className="flex-grow flex flex-col justify-center">
+      <div className="flex-grow flex flex-col justify-center overflow-hidden">
         {widget.type === 'stat' ? (
           <div className="py-2 space-y-1">
             <div className="flex items-baseline gap-1.5">
@@ -216,7 +236,7 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
             </div>
           </div>
         ) : (
-          <div className="w-full mt-2">
+          <div className="w-full h-full">
             {renderChart()}
           </div>
         )}
