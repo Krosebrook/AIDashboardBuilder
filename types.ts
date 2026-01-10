@@ -44,6 +44,8 @@ export interface DashboardWidget {
 }
 
 export interface DashboardData {
+  id?: string;
+  lastModified?: number;
   title: string;
   description: string;
   themeColor: string;

@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, 
@@ -8,12 +9,18 @@ import {
 } from 'recharts';
 import { DashboardWidget, ScatterConfig, ChartDataItem } from '../types';
 
-const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
+const DEFAULT_CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
 
 interface CustomScatterTooltipProps {
   active?: boolean;
   payload?: any[];
   scatterConfig?: ScatterConfig;
+  colors?: string[]; // Pass colors to tooltip for mapping
+}
+
+interface WidgetRendererProps {
+  widget: DashboardWidget;
+  palette?: string[];
 }
 
 // Simple Linear Regression for Trendlines
@@ -46,12 +53,13 @@ const formatNumber = (num: number | string | undefined) => {
   return num ?? '-';
 };
 
-const CustomScatterTooltip = ({ active, payload, scatterConfig }: CustomScatterTooltipProps) => {
+const CustomScatterTooltip = ({ active, payload, scatterConfig, colors }: CustomScatterTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const { sizeKey, colorKey } = scatterConfig || {};
 
     const getValue = (key: string) => data[key];
+    const safeColors = colors || DEFAULT_CHART_COLORS;
 
     return (
       <div className="bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-white/10 text-xs font-medium min-w-[180px] z-50">
@@ -96,13 +104,15 @@ const CustomScatterTooltip = ({ active, payload, scatterConfig }: CustomScatterT
   return null;
 };
 
-export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }) => {
+export const WidgetRenderer: React.FC<WidgetRendererProps> = ({ widget, palette }) => {
   const primaryColor = widget.color || '#3b82f6';
-  const [hiddenKeys, setHiddenKeys] = useState<string[]>([]); // Stores names of hidden legend items
+  const chartColors = palette && palette.length > 0 ? palette : DEFAULT_CHART_COLORS;
+  const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
 
   // Toggle visibility of legend items
   const handleLegendClick = (e: any) => {
-    const key = e.value || e.id || e.name; // Recharts payload shape varies
+    // Recharts legend payload value is usually the name text
+    const key = e.value || e.id || e.name; 
     setHiddenKeys(prev => 
       prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
     );
@@ -111,43 +121,48 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
   const processedData = useMemo(() => {
     let data = widget.chartData || [];
     
-    // Filter data for categorical charts based on legend state
-    if (['pie-chart', 'radar-chart', 'radial-bar-chart', 'funnel-chart'].includes(widget.type)) {
-       // For these, legend items usually match 'name'
-       // However, we don't want to remove data points for Radar, just maybe hide series? 
-       // For Pie/Funnel it's usually filtering slices.
-       // Let's implement slice filtering for Pie/Radial/Funnel
+    // Filter data for categorical charts where legend represents data points
+    // This ensures chart (like Pie) recalculates layout when items are hidden
+    if (['pie-chart', 'radial-bar-chart', 'funnel-chart'].includes(widget.type)) {
+       return data.filter(d => !hiddenKeys.includes(d.name));
     }
     
     if (widget.showTrendline && (widget.type === 'line-chart' || widget.type === 'area-chart')) {
       return calculateTrendline(data);
     }
     return data;
-  }, [widget.chartData, widget.showTrendline, widget.type]);
+  }, [widget.chartData, widget.showTrendline, widget.type, hiddenKeys]);
+
+  // Helper to get stable color based on original data index
+  // This prevents colors from shifting when data points are filtered out
+  const getStableColor = (name: string, index: number) => {
+      const originalIndex = widget.chartData?.findIndex(d => d.name === name);
+      const effectiveIndex = originalIndex !== -1 && originalIndex !== undefined ? originalIndex : index;
+      return chartColors[effectiveIndex % chartColors.length];
+  };
 
   // Scatter plot metadata
   const scatterMeta = useMemo(() => {
     if (widget.type !== 'scatter-plot') return null;
     const colorKey = widget.scatterConfig?.colorKey;
     
-    // Explicitly handle undefined/empty colorKey
     if (!colorKey) {
         return { colorKey, categories: [], colorMap: {} };
     }
 
-    // Safely map categories without 'as any' casting
-    const rawCategories = (widget.chartData || []).map(d => {
-        const val = d[colorKey as string]; // Valid due to ChartDataItem index signature
+    const rawCategories: string[] = (widget.chartData || []).map((d) => {
+        const key = colorKey as string;
+        const val = d[key]; 
         return String(val ?? 'Uncategorized');
     });
 
     const categories = [...new Set(rawCategories)].filter(cat => cat !== 'undefined');
     
     const colorMap: Record<string, string> = {};
-    categories.forEach((cat, i) => { colorMap[cat] = CHART_COLORS[i % CHART_COLORS.length]; });
+    categories.forEach((cat, i) => { colorMap[cat] = chartColors[i % chartColors.length]; });
     
     return { colorKey, categories, colorMap };
-  }, [widget.type, widget.chartData, widget.scatterConfig?.colorKey]);
+  }, [widget.type, widget.chartData, widget.scatterConfig?.colorKey, chartColors]);
 
   const renderChart = () => {
     const data = processedData;
@@ -165,7 +180,6 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
 
     const tooltipStyle = { borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', fontSize: '11px', fontWeight: 700 };
     
-    // Common Axis Components
     const renderXAxis = (dataKey = "name") => (
       <XAxis 
         dataKey={dataKey} 
@@ -184,25 +198,35 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
       </YAxis>
     );
 
-    // Common Zoom Brush
     const renderBrush = (dataKey = "name") => (
        widget.enableZoom && <Brush dataKey={dataKey} height={20} stroke={primaryColor} fill="#f8fafc" tickFormatter={() => ''} />
     );
 
-    // Common Legend
-    const renderLegend = () => (
+    const renderLegend = (props?: any) => (
       <Legend 
         onClick={handleLegendClick}
-        wrapperStyle={{ fontSize: '10px', fontWeight: 600, paddingTop: '10px', cursor: 'pointer' }}
+        wrapperStyle={{ fontSize: '10px', fontWeight: 600, paddingTop: '10px', cursor: 'pointer', ...props?.wrapperStyle }}
         formatter={(value, entry: any) => {
           const isHidden = hiddenKeys.includes(value);
           return <span style={{ color: isHidden ? '#cbd5e1' : '#475569', textDecoration: isHidden ? 'line-through' : 'none' }}>{value}</span>;
         }}
+        {...props}
       />
     );
 
-    // Check if main series is hidden (for Line/Bar/Area where there's usually 1 series)
     const isSeriesHidden = hiddenKeys.includes(widget.title);
+
+    // Custom legend payload for categorical charts that filter data
+    // We need this because if we filter data, the default legend items disappear
+    const getCategoryLegendPayload = () => {
+        return (widget.chartData || []).map((item, index) => ({
+            id: item.name,
+            value: item.name,
+            type: 'square',
+            color: getStableColor(item.name, index),
+            inactive: hiddenKeys.includes(item.name)
+        }));
+    };
 
     switch (widget.type) {
       case 'line-chart':
@@ -214,19 +238,18 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
               {renderYAxis()}
               <Tooltip contentStyle={tooltipStyle} />
               {renderLegend()}
-              {!isSeriesHidden && (
-                <Line 
-                  name={widget.title}
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke={primaryColor} 
-                  strokeWidth={3} 
-                  dot={{ r: 3, fill: primaryColor, strokeWidth: 1.5, stroke: '#fff' }} 
-                  activeDot={{ r: 5, strokeWidth: 0 }}
-                >
-                   {widget.showDataLabels && <LabelList dataKey="value" position="top" fontSize={9} fontWeight={700} fill="#64748b" />}
-                </Line>
-              )}
+              <Line 
+                name={widget.title}
+                type="monotone" 
+                dataKey="value" 
+                stroke={primaryColor} 
+                strokeWidth={3} 
+                dot={{ r: 3, fill: primaryColor, strokeWidth: 1.5, stroke: '#fff' }} 
+                activeDot={{ r: 5, strokeWidth: 0 }}
+                hide={isSeriesHidden}
+              >
+                 {widget.showDataLabels && <LabelList dataKey="value" position="top" fontSize={9} fontWeight={700} fill="#64748b" />}
+              </Line>
               {widget.showTrendline && !isSeriesHidden && (
                 <Line type="monotone" dataKey="trendValue" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Trend" />
               )}
@@ -243,11 +266,16 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
               {renderYAxis()}
               <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={tooltipStyle} />
               {renderLegend()}
-              {!isSeriesHidden && (
-                <Bar name={widget.title} dataKey="value" fill={primaryColor} radius={[4, 4, 0, 0]} barSize={24}>
-                  {widget.showDataLabels && <LabelList dataKey="value" position="top" fontSize={9} fontWeight={700} fill="#64748b" />}
-                </Bar>
-              )}
+              <Bar 
+                name={widget.title} 
+                dataKey="value" 
+                fill={primaryColor} 
+                radius={[4, 4, 0, 0]} 
+                barSize={24}
+                hide={isSeriesHidden}
+              >
+                {widget.showDataLabels && <LabelList dataKey="value" position="top" fontSize={9} fontWeight={700} fill="#64748b" />}
+              </Bar>
               {renderBrush()}
             </BarChart>
           </ResponsiveContainer>
@@ -267,11 +295,18 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
               {renderYAxis()}
               <Tooltip contentStyle={tooltipStyle} />
               {renderLegend()}
-              {!isSeriesHidden && (
-                <Area name={widget.title} type="monotone" dataKey="value" stroke={primaryColor} strokeWidth={2.5} fillOpacity={1} fill={`url(#grad-${widget.id})`}>
-                  {widget.showDataLabels && <LabelList dataKey="value" position="top" fontSize={9} fontWeight={700} fill="#64748b" />}
-                </Area>
-              )}
+              <Area 
+                name={widget.title} 
+                type="monotone" 
+                dataKey="value" 
+                stroke={primaryColor} 
+                strokeWidth={2.5} 
+                fillOpacity={1} 
+                fill={`url(#grad-${widget.id})`}
+                hide={isSeriesHidden}
+              >
+                {widget.showDataLabels && <LabelList dataKey="value" position="top" fontSize={9} fontWeight={700} fill="#64748b" />}
+              </Area>
               {widget.showTrendline && !isSeriesHidden && (
                 <Line type="monotone" dataKey="trendValue" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Trend" />
               )}
@@ -283,22 +318,27 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
         return (
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
-              <Pie data={data} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={5} dataKey="value" stroke="none">
+              <Pie 
+                data={data} 
+                cx="50%" 
+                cy="50%" 
+                innerRadius={45} 
+                outerRadius={65} 
+                paddingAngle={5} 
+                dataKey="value" 
+                stroke="none"
+                label={widget.showDataLabels ? { fill: '#64748b', fontSize: 10, fontWeight: 600 } : false}
+                labelLine={widget.showDataLabels}
+              >
                 {data.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={hiddenKeys.includes(entry.name) ? '#e2e8f0' : CHART_COLORS[index % CHART_COLORS.length]} 
-                    stroke={hiddenKeys.includes(entry.name) ? '#cbd5e1' : 'none'}
-                    fillOpacity={hiddenKeys.includes(entry.name) ? 0.3 : 1}
+                    fill={getStableColor(entry.name, index)}
                   />
                 ))}
               </Pie>
               <Tooltip contentStyle={tooltipStyle} />
-              <Legend 
-                onClick={handleLegendClick} 
-                wrapperStyle={{ fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}
-                formatter={(value) => <span style={{ textDecoration: hiddenKeys.includes(value) ? 'line-through' : 'none', color: hiddenKeys.includes(value) ? '#cbd5e1' : '#475569' }}>{value}</span>}
-              />
+              {renderLegend({ payload: getCategoryLegendPayload() })}
             </PieChart>
           </ResponsiveContainer>
         );
@@ -312,24 +352,23 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
                 tick={{ fontSize: 9, fill: '#64748b', fontWeight: 700 }} 
               />
               <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
-              {!isSeriesHidden && (
-                <Radar 
-                  name={widget.title} 
-                  dataKey="value" 
-                  stroke={primaryColor} 
-                  strokeWidth={3} 
-                  fill={primaryColor} 
-                  fillOpacity={0.25} 
-                />
-              )}
+              <Radar 
+                name={widget.title} 
+                dataKey="value" 
+                stroke={primaryColor} 
+                strokeWidth={3} 
+                fill={primaryColor} 
+                fillOpacity={0.25} 
+                hide={isSeriesHidden}
+              >
+                {widget.showDataLabels && <LabelList dataKey="value" position="top" fill={primaryColor} fontSize={10} fontWeight={700} />}
+              </Radar>
               <Tooltip contentStyle={tooltipStyle} />
               {renderLegend()}
             </RadarChart>
           </ResponsiveContainer>
         );
       case 'radial-bar-chart':
-        // Filter hidden keys from data for Radial Bar
-        const radialData = data.filter(d => !hiddenKeys.includes(d.name));
         return (
           <ResponsiveContainer width="100%" height={180}>
             <RadialBarChart cx="50%" cy="50%" innerRadius="20%" outerRadius="100%" barSize={12} data={data}>
@@ -343,21 +382,19 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
                  {data.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={hiddenKeys.includes(entry.name) ? '#e2e8f0' : CHART_COLORS[index % CHART_COLORS.length]} 
-                    fillOpacity={hiddenKeys.includes(entry.name) ? 0.1 : 1}
+                    fill={getStableColor(entry.name, index)} 
                   />
                 ))}
-                <LabelList position="insideStart" fill="#fff" dataKey="value" fontSize={8} fontWeight={700} />
+                {widget.showDataLabels && <LabelList position="insideStart" fill="#fff" dataKey="value" fontSize={8} fontWeight={700} />}
               </RadialBar>
               <Tooltip contentStyle={tooltipStyle} />
-              <Legend 
-                layout="vertical" 
-                verticalAlign="middle" 
-                align="right"
-                onClick={handleLegendClick}
-                wrapperStyle={{ fontSize: '9px', fontWeight: 600, color: '#64748b', cursor: 'pointer' }} 
-                formatter={(value) => <span style={{ textDecoration: hiddenKeys.includes(value) ? 'line-through' : 'none', color: hiddenKeys.includes(value) ? '#cbd5e1' : '#475569' }}>{value}</span>}
-              />
+              {renderLegend({ 
+                  payload: getCategoryLegendPayload(),
+                  layout: "vertical", 
+                  verticalAlign: "middle", 
+                  align: "right",
+                  wrapperStyle: { fontSize: '9px', fontWeight: 600, color: '#64748b', cursor: 'pointer' }
+              })}
             </RadialBarChart>
           </ResponsiveContainer>
         );
@@ -374,8 +411,7 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
                 {data.map((entry, index) => (
                    <Cell 
                     key={`cell-${index}`} 
-                    fill={hiddenKeys.includes(entry.name) ? '#e2e8f0' : CHART_COLORS[index % CHART_COLORS.length]} 
-                    fillOpacity={hiddenKeys.includes(entry.name) ? 0.3 : 1}
+                    fill={getStableColor(entry.name, index)}
                    />
                 ))}
                 <LabelList position="right" fill="#64748b" stroke="none" dataKey="name" fontSize={9} fontWeight={600} />
@@ -383,11 +419,7 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
                     <LabelList position="inside" fill="#fff" stroke="none" dataKey="value" fontSize={10} fontWeight={800} />
                 )}
               </Funnel>
-              <Legend 
-                onClick={handleLegendClick}
-                wrapperStyle={{ fontSize: '10px', fontWeight: 600, cursor: 'pointer', paddingTop: 10 }} 
-                formatter={(value) => <span style={{ textDecoration: hiddenKeys.includes(value) ? 'line-through' : 'none', color: hiddenKeys.includes(value) ? '#cbd5e1' : '#475569' }}>{value}</span>}
-              />
+              {renderLegend({ payload: getCategoryLegendPayload(), wrapperStyle: { fontSize: '10px', fontWeight: 600, cursor: 'pointer', paddingTop: 10 } })}
             </FunnelChart>
           </ResponsiveContainer>
         );
@@ -395,7 +427,6 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
         if (!scatterMeta) return null;
         const { colorKey, categories, colorMap } = scatterMeta;
         
-        // Filter scatter data based on hidden categories
         const visibleScatterData = data.filter(d => {
              const cat = colorKey ? String((d as any)[colorKey as string] || 'Uncategorized') : 'Uncategorized';
              return !hiddenKeys.includes(cat);
@@ -420,7 +451,7 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
                 />
                 <Tooltip 
                   cursor={{ strokeDasharray: '3 3', stroke: '#cbd5e1' }} 
-                  content={<CustomScatterTooltip scatterConfig={widget.scatterConfig} />}
+                  content={<CustomScatterTooltip scatterConfig={widget.scatterConfig} colors={chartColors} />}
                   isAnimationActive={false} 
                 />
                 <Scatter 
@@ -434,6 +465,7 @@ export const WidgetRenderer: React.FC<{ widget: DashboardWidget }> = ({ widget }
                     const fill = colorKey ? (colorMap[catValue] || primaryColor) : primaryColor;
                     return <Cell key={`cell-${index}`} fill={fill} />;
                   })}
+                  {widget.showDataLabels && <LabelList dataKey="y" position="top" style={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }} />}
                 </Scatter>
                 {renderBrush("x")}
               </ScatterChart>
