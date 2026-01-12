@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, 
@@ -59,7 +58,6 @@ const CustomScatterTooltip = ({ active, payload, scatterConfig, colors }: Custom
     const { sizeKey, colorKey } = scatterConfig || {};
 
     const getValue = (key: string) => data[key];
-    const safeColors = colors || DEFAULT_CHART_COLORS;
 
     return (
       <div className="bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-white/10 text-xs font-medium min-w-[180px] z-50">
@@ -166,7 +164,8 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({ widget, palette 
 
   const renderChart = () => {
     const data = processedData;
-    if (widget.type !== 'stat' && data.length === 0) {
+    // Check original data length so we don't hide the chart (and legend) when user filters everything out
+    if (widget.type !== 'stat' && (!widget.chartData || widget.chartData.length === 0)) {
       return (
         <div className="h-[180px] w-full bg-slate-50/50 rounded-xl flex items-center justify-center border border-dashed border-slate-200">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No data available</p>
