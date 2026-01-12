@@ -6,7 +6,7 @@ import {
   MessageSquare, Send, ArrowLeft,
   Box, Palette, Maximize, TrendingUp, Type, ZoomIn, Eye,
   Save, FolderOpen, Clock, ChevronRight as ChevronRightIcon,
-  Table2, BarChart3, Columns, Monitor, Database, Download
+  Table2, BarChart3, Columns, Monitor, Database, Download, Shapes
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardData, WizardStep, DashboardWidget, WidgetType, ScatterShape, ThemeVariant } from './types';
@@ -217,13 +217,14 @@ const App: React.FC = () => {
               </div>
 
               <div className={`grid gap-8 ${dashboardData.layoutColumns === 1 ? 'grid-cols-1' : dashboardData.layoutColumns === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
-                {dashboardData.widgets.map((widget) => (
+                {dashboardData.widgets.map((widget, idx) => (
                   <div key={widget.id} className="group">
                     <WidgetRenderer 
                         widget={{ ...widget, color: widget.color || dashboardData.themeColor }} 
                         themeVariant={dashboardData.themeVariant} 
                         onEdit={() => setEditingWidgetId(widget.id)}
                         onViewData={() => setViewingDataWidgetId(widget.id)}
+                        onTitleChange={(newTitle) => updateWidget(widget.id, { title: newTitle })}
                     />
                   </div>
                 ))}
@@ -370,6 +371,29 @@ const App: React.FC = () => {
                         </select>
                       </div>
                     </section>
+                    
+                    {currentEditingWidget.type === 'scatter-plot' && (
+                        <section className="space-y-4">
+                            <div className="flex items-center gap-2 text-slate-400 font-black text-xs uppercase tracking-widest"><Shapes className="w-4 h-4" /> Scatter Configuration</div>
+                            <div className="space-y-3">
+                                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Data Point Shape</label>
+                                <select 
+                                    value={currentEditingWidget.scatterConfig?.shape || 'circle'} 
+                                    onChange={(e) => updateWidget(editingWidgetId, { scatterConfig: { ...currentEditingWidget.scatterConfig, shape: e.target.value as ScatterShape } })} 
+                                    className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-sm"
+                                >
+                                    <option value="circle">Circle</option>
+                                    <option value="cross">Cross</option>
+                                    <option value="diamond">Diamond</option>
+                                    <option value="square">Square</option>
+                                    <option value="star">Star</option>
+                                    <option value="triangle">Triangle</option>
+                                    <option value="wye">Wye</option>
+                                </select>
+                            </div>
+                        </section>
+                    )}
+
                     {currentEditingWidget.type !== 'stat' && (
                       <section className="space-y-4">
                         <div className="flex items-center gap-2 text-slate-400 font-black text-xs uppercase tracking-widest"><Settings2 className="w-4 h-4" /> Visualization</div>

@@ -8,7 +8,7 @@ import {
   Tooltip, ResponsiveContainer, Cell, Legend, Brush, Label
 } from 'recharts';
 import { DashboardWidget, ScatterConfig, ChartDataItem, ThemeVariant } from '../types';
-import { Info } from 'lucide-react';
+import { Info, Database, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const DEFAULT_CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
@@ -26,6 +26,7 @@ interface WidgetRendererProps {
   themeVariant?: ThemeVariant;
   onEdit?: () => void;
   onViewData?: () => void;
+  onTitleChange?: (newTitle: string) => void;
 }
 
 const calculateTrendline = (data: ChartDataItem[]) => {
@@ -67,7 +68,7 @@ const CustomScatterTooltip = ({ active, payload, scatterConfig }: CustomScatterT
   return null;
 };
 
-export const WidgetRenderer: React.FC<WidgetRendererProps> = ({ widget, palette, themeVariant = 'minimal', onEdit, onViewData }) => {
+export const WidgetRenderer: React.FC<WidgetRendererProps> = ({ widget, palette, themeVariant = 'minimal', onEdit, onViewData, onTitleChange }) => {
   const primaryColor = widget.color || '#3b82f6';
   const chartColors = palette && palette.length > 0 ? palette : DEFAULT_CHART_COLORS;
   const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
@@ -269,31 +270,42 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({ widget, palette,
 
   return (
     <motion.div 
-      whileHover={{ scale: 1.01, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
-      className={`p-6 flex flex-col h-[340px] relative transition-all duration-500 ${themeStyles} ${themeVariant === 'corporate' ? `border-t-[${primaryColor}]` : ''}`} 
+      whileHover={{ scale: 1.02, boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.15)" }}
+      className={`p-6 flex flex-col h-[340px] relative group transition-all duration-500 ${themeStyles} ${themeVariant === 'corporate' ? `border-t-[${primaryColor}]` : ''}`} 
       style={themeVariant === 'corporate' ? { borderTopColor: primaryColor } : {}}
     >
       <div className="flex justify-between items-start mb-4 relative z-10">
         <div className="flex items-center gap-2 max-w-[70%]">
-          <h3 className={`${textColorClass} font-black text-[10px] uppercase tracking-[0.25em] truncate`}>
-            {widget.title}
-          </h3>
+          {onTitleChange ? (
+             <input 
+                type="text" 
+                value={widget.title} 
+                onChange={(e) => onTitleChange(e.target.value)}
+                className={`${textColorClass} font-black text-[10px] uppercase tracking-[0.25em] bg-transparent border-none focus:ring-1 focus:ring-indigo-100 rounded px-1 -ml-1 w-full`}
+             />
+          ) : (
+            <h3 className={`${textColorClass} font-black text-[10px] uppercase tracking-[0.25em] truncate`}>
+              {widget.title}
+            </h3>
+          )}
+          
           <div 
-            className="cursor-help text-slate-300 hover:text-indigo-400 transition-colors"
+            className="cursor-help text-slate-300 hover:text-indigo-400 transition-colors flex-shrink-0"
             onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
           >
-            <Info className="w-3 h-3" />
+            <Info className="w-3.5 h-3.5" />
           </div>
           
           <AnimatePresence>
             {showTooltip && widget.description && (
               <motion.div 
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 5 }}
-                className="absolute top-8 left-0 z-50 bg-slate-800 text-white text-[10px] p-3 rounded-xl shadow-2xl border border-white/10 w-48 font-bold leading-relaxed"
+                initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                className="absolute top-8 left-0 z-50 bg-slate-900/95 backdrop-blur text-white text-[10px] p-4 rounded-2xl shadow-2xl border border-white/10 w-56 font-bold leading-relaxed pointer-events-none"
               >
+                <div className="text-indigo-400 uppercase tracking-widest text-[8px] mb-1">Widget Info</div>
                 {widget.description}
               </motion.div>
             )}
@@ -303,7 +315,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({ widget, palette,
         <div className="flex items-center gap-2">
             {widget.trend && (
               <div className={`flex items-center text-[10px] font-black px-2 py-0.5 rounded-full whitespace-nowrap ${widget.trend.isUpward ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                {widget.trend.value}%
+                {widget.trend.isUpward ? '↑' : '↓'} {widget.trend.value}%
               </div>
             )}
         </div>
@@ -331,23 +343,23 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({ widget, palette,
       </div>
 
       {/* Quick Actions Hover Overlay */}
-      <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
           {onViewData && (
               <button 
                 onClick={(e) => { e.stopPropagation(); onViewData(); }} 
-                className="p-2 bg-white/90 backdrop-blur rounded-xl shadow-lg border border-slate-100 text-slate-500 hover:text-indigo-600 hover:bg-white transition-all"
+                className="p-2.5 bg-white/95 backdrop-blur rounded-xl shadow-xl border border-slate-100 text-slate-500 hover:text-indigo-600 hover:scale-110 active:scale-95 transition-all"
                 title="View Raw Data"
               >
-                <Label className="w-4 h-4" />
+                <Database className="w-4 h-4" />
               </button>
           )}
           {onEdit && (
             <button 
               onClick={(e) => { e.stopPropagation(); onEdit(); }} 
-              className="p-2 bg-white/90 backdrop-blur rounded-xl shadow-lg border border-slate-100 text-slate-500 hover:text-indigo-600 hover:bg-white transition-all"
+              className="p-2.5 bg-white/95 backdrop-blur rounded-xl shadow-xl border border-slate-100 text-slate-500 hover:text-indigo-600 hover:scale-110 active:scale-95 transition-all"
               title="Widget Settings"
             >
-              <Info className="w-4 h-4" />
+              <Settings2 className="w-4 h-4" />
             </button>
           )}
       </div>
