@@ -6,9 +6,9 @@ export interface ChartDataItem {
   value: number;
   x?: number;
   y?: number;
-  z?: number; // often used for bubble/size
+  z?: number;
   category?: string;
-  fill?: string; // for radial bars or specific coloring
+  fill?: string;
   [key: string]: string | number | undefined;
 }
 
@@ -25,6 +25,7 @@ export interface DashboardWidget {
   id: string;
   type: WidgetType;
   title: string;
+  description?: string;
   value?: string | number;
   unit?: string;
   trend?: {
@@ -35,7 +36,6 @@ export interface DashboardWidget {
   color?: string;
   scatterConfig?: ScatterConfig;
   
-  // New visual configuration options
   showDataLabels?: boolean;
   showTrendline?: boolean;
   xAxisLabel?: string;
@@ -43,12 +43,16 @@ export interface DashboardWidget {
   enableZoom?: boolean;
 }
 
+export type ThemeVariant = 'minimal' | 'glass' | 'neo' | 'dark' | 'corporate';
+
 export interface DashboardData {
   id?: string;
   lastModified?: number;
   title: string;
   description: string;
   themeColor: string;
+  themeVariant?: ThemeVariant;
+  layoutColumns?: 1 | 2 | 3;
   widgets: DashboardWidget[];
 }
 
