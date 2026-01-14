@@ -64,5 +64,6 @@ export interface SampleTemplate {
   id: string;
   name: string;
   icon: string;
+  category: string;
   prompt: string;
 }
