@@ -2,16 +2,14 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { DashboardData, ChartDataItem } from "./types";
 
-// Type declaration for Vite environment variables
-interface ImportMetaEnv {
-  readonly VITE_GEMINI_API_KEY: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
-
-const getAI = () => new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+const getAI = () => {
+  // Safely access process.env.API_KEY to avoid ReferenceError in environments where process is undefined
+  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+  if (!apiKey) {
+    console.error("API_KEY is missing. Please ensure process.env.API_KEY is configured.");
+  }
+  return new GoogleGenAI({ apiKey: apiKey || '' });
+};
 
 const WIDGET_ENUM = ['stat', 'line-chart', 'bar-chart', 'pie-chart', 'area-chart', 'scatter-plot', 'radar-chart', 'radial-bar-chart', 'funnel-chart'];
 const SCATTER_SHAPES = ['circle', 'cross', 'diamond', 'square', 'star', 'triangle', 'wye'];

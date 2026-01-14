@@ -8,11 +8,15 @@ import {
   Tooltip, ResponsiveContainer, Cell, Legend, Brush, Label
 } from 'recharts';
 import { DashboardWidget, ScatterConfig, ChartDataItem, ThemeVariant } from '../types';
-import { Info, Database, Settings2, Sparkles, TrendingUp, TrendingDown, BrainCircuit, Loader2, X } from 'lucide-react';
+import { Info, Database, Settings2, Sparkles, TrendingUp, TrendingDown, Loader2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleGenAI } from "@google/genai";
 
-const getAI = () => new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+const getAI = () => {
+    // Safely access process.env.API_KEY to avoid ReferenceError in environments where process is undefined
+    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+    return new GoogleGenAI({ apiKey: apiKey || '' });
+};
 
 const DEFAULT_CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
 
@@ -106,7 +110,7 @@ const RichInteractiveTooltip = ({ active, payload, label, themeVariant, widgetTi
                 disabled={loadingInsight}
                 className="w-full flex items-center justify-center gap-2 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
               >
-                {loadingInsight ? <Loader2 className="w-3 h-3 animate-spin" /> : <BrainCircuit className="w-3 h-3" />}
+                {loadingInsight ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                 Explore Insight
               </button>
             )}

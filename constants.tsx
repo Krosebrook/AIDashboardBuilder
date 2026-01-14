@@ -5,7 +5,7 @@ export const TEMPLATE_CATEGORIES = [
   "All", "Business", "Marketing", "Finance", "Personal", "Health", "Engineering", "Sales"
 ];
 
-export const SAMPLE_TEMPLATES: SampleTemplate[] = [
+export const SAMPLE_TEMPLATES: (SampleTemplate & { category: string })[] = [
   // --- BUSINESS & OPERATIONS ---
   {
     id: 'saas-metrics',

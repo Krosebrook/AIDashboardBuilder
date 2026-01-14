@@ -4,7 +4,7 @@ import {
   Plus, FileText, ChevronRight, Sparkles, AlertCircle, Github, 
   Loader2, Edit3, Trash2, X, Settings2, Layout,
   MessageSquare, Send, ArrowLeft,
-  Box, Palette, Maximize, TrendingUp, Type, ZoomIn, Eye,
+  Box, Maximize, TrendingUp, Type, ZoomIn, Eye,
   Save, FolderOpen, Clock, ChevronRight as ChevronRightIcon,
   Table2, BarChart3, Columns, Monitor, Database, Download, Shapes, Calendar,
   Sun, Moon, Palette as PaletteIcon, Filter, Search, Grid, Circle, Square, Star, Triangle, Zap
