@@ -4,6 +4,7 @@ export type WidgetType = 'stat' | 'line-chart' | 'bar-chart' | 'pie-chart' | 'ar
 export interface ChartDataItem {
   name: string;
   value: number;
+  date?: string; // Added for date filtering
   x?: number;
   y?: number;
   z?: number;
@@ -28,6 +29,7 @@ export interface DashboardWidget {
   description?: string;
   value?: string | number;
   unit?: string;
+  loading?: boolean; // Added for skeleton loaders
   trend?: {
     value: number;
     isUpward: boolean;
@@ -43,7 +45,7 @@ export interface DashboardWidget {
   enableZoom?: boolean;
 }
 
-export type ThemeVariant = 'minimal' | 'glass' | 'neo' | 'dark' | 'corporate';
+export type ThemeVariant = 'minimal' | 'glass' | 'neo' | 'dark' | 'corporate' | 'colorful';
 
 export interface DashboardData {
   id?: string;
